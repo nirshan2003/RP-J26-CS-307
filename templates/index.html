@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IoMT Defender</title>
+<title>IoMT Defender — Reconnaissance & Intrusion Attack Detection</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -76,15 +76,10 @@ th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #1e293b}
 th{background:rgba(51,65,85,0.5);color:#60a5fa;font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.3px}
 tr:hover{background:rgba(59,130,246,0.07)}
 .badge{padding:3px 10px;border-radius:10px;font-size:.75rem;font-weight:bold}
-.b0{background:rgba(34,197,94,0.15);color:#22c55e}
-.b1{background:rgba(239,68,68,0.15);color:#ef4444}
-.b2{background:rgba(249,115,22,0.15);color:#f97316}
-.b3{background:rgba(251,146,60,0.15);color:#fb923c}
-.b4{background:rgba(251,191,36,0.15);color:#fbbf24}
-.b5{background:rgba(220,38,38,0.2);color:#dc2626}
-.b6{background:rgba(168,85,247,0.15);color:#a855f7}
-.b7{background:rgba(99,102,241,0.15);color:#6366f1}
-.b8{background:rgba(139,92,246,0.15);color:#8b5cf6}
+.b-safe{background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3)}
+.b-high{background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3)}
+.b-med{background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3)}
+.b-crit{background:rgba(220,38,38,0.2);color:#dc2626;border:1px solid rgba(220,38,38,0.4)}
 .tick{color:#22c55e}
 .cross{color:#ef4444}
 .prog-bar{width:100%;height:4px;background:rgba(51,65,85,.5);border-radius:2px;margin-top:10px;display:none}
@@ -111,6 +106,7 @@ tr.selected-row td{background:rgba(96,165,250,0.15)!important;border-left:3px so
   <nav class="nav">
     <div class="logo">
       <div class="shield">🛡️</div>
+      <span>IoMT Defender</span>
     </div>
     <div class="sys-status">
       <div class="dot" id="statusDot"></div>
@@ -121,32 +117,26 @@ tr.selected-row td{background:rgba(96,165,250,0.15)!important;border-left:3px so
 
 <main class="wrap">
   <section class="hero">
-    <h1>IoMT Host Behaviour Malware Detection</h1>
+    <h1>IoMT Reconnaissance & Intrusion Attack Detection</h1>
+    <p>Network Scanning & Intrusion Threat Classification with SHAP Explainable AI</p>
   </section>
 
   <section class="panel">
     <div class="card">
       <div class="card-title">🔬 Detection Control</div>
       <div class="form-row">
-        <label>ML Model</label>
+        <label>ML Model <span style="font-size:.75rem;color:#94a3b8;font-weight:normal;">(Auto-detected from models/ folder)</span></label>
         <select id="modelSel">
-          <option value="knn">KNN — K-Nearest Neighbours (Best: 98.49%)</option>
-          <option value="rf">Random Forest (98.17%)</option>
-          <option value="et">Extra Trees (98.17%)</option>
-          <option value="xgb">XGBoost (98.17%)</option>
-          <option value="lgbm">LightGBM (98.17%)</option>
-          <option value="dt">Decision Tree (97.x%)</option>
-          <option value="mlp">MLP Neural Network (96.x%)</option>
-          <option value="svm">SVM / LinearSVC (80.94%)</option>
+          <option value="" disabled selected>⏳ Scanning models/ folder...</option>
         </select>
       </div>
       <div class="form-row">
         <label>Test Samples to Analyse</label>
         <select id="sampleSel">
-          <option value="270">270 (30 per class)</option>
-          <option value="450" selected>450 (50 per class)</option>
-          <option value="900">900 (100 per class)</option>
-          <option value="1800">1800 (200 per class)</option>
+          <option value="200">200 Samples</option>
+          <option value="450" selected>450 Samples</option>
+          <option value="900">900 Samples</option>
+          <option value="1800">1800 Samples</option>
         </select>
       </div>
       <button class="btn" id="runBtn" onclick="runDetection()">▶ Run Detection</button>
@@ -156,11 +146,9 @@ tr.selected-row td{background:rgba(96,165,250,0.15)!important;border-left:3px so
     <div class="card">
       <div class="card-title">⚙️ System Status</div>
       <div class="status-row"><span>Test Dataset</span><span id="sData" class="wait">⏳ Checking...</span></div>
-      <div class="status-row"><span>KNN Model</span><span id="sKnn" class="wait">⏳</span></div>
-      <div class="status-row"><span>Random Forest</span><span id="sRf" class="wait">⏳</span></div>
-      <div class="status-row"><span>XGBoost</span><span id="sXgb" class="wait">⏳</span></div>
-      <div class="status-row"><span>LightGBM</span><span id="sLgbm" class="wait">⏳</span></div>
-      <div class="status-row"><span>Extra Trees</span><span id="sEt" class="wait">⏳</span></div>
+      <div id="modelStatusList">
+        <div class="status-row"><span>Models (.pkl)</span><span class="wait">⏳ Scanning...</span></div>
+      </div>
       <div class="status-row"><span>Last Run</span><span id="sLast" style="color:#94a3b8">—</span></div>
     </div>
   </section>
@@ -196,7 +184,7 @@ tr.selected-row td{background:rgba(96,165,250,0.15)!important;border-left:3px so
   <!-- Charts -->
   <section class="charts">
     <div class="card">
-      <div class="card-title">🥧 Malware Class Distribution</div>
+      <div class="card-title">🥧 Attack Class Distribution</div>
       <canvas id="donutChart" height="260"></canvas>
     </div>
     <div class="card">
@@ -220,8 +208,8 @@ tr.selected-row td{background:rgba(96,165,250,0.15)!important;border-left:3px so
         <div style="color:#94a3b8;font-size:.9rem">Model: <span id="deepModel" style="color:#60a5fa"></span></div>
       </div>
       <p style="color:#94a3b8;font-size:.85rem;margin-bottom:1.2rem">
-        Each bar shows how much a feature <span style="color:#22c55e">pushed the prediction toward</span> or
-        <span style="color:#ef4444">pushed it away from</span> the detected class.
+        Each bar shows how much a network traffic feature <span style="color:#22c55e">pushed the prediction toward</span> or
+        <span style="color:#ef4444">pushed it away from</span> the detected reconnaissance or intrusion attack class.
         Longer bar = stronger influence.
       </p>
       <div id="shapBars"></div>
@@ -258,8 +246,7 @@ tr.selected-row td{background:rgba(96,165,250,0.15)!important;border-left:3px so
 </main>
 
 <script>
-const CLASS_NAMES = ['Benign','Botnet/Bashlite','Backdoor/HttpBackdoor','Backdoor/Generic','Backdoor/TheTick','Ransomware-PoC','Coinminer/XMRig','Rootkit/Beurk','Rootkit/Bdvl'];
-const CLASS_COLORS = ['#22c55e','#ef4444','#f97316','#fb923c','#fbbf24','#dc2626','#a855f7','#6366f1','#8b5cf6'];
+const PALETTE = ['#22c55e','#ef4444','#f97316','#fb923c','#fbbf24','#dc2626','#a855f7','#6366f1','#8b5cf6','#06b6d4'];
 const DEVICE_ICONS = {'RPi':'🖥️','Camera':'📷','SmartPump':'💉','Infusion':'🩺','VentMonitor':'🫁','Gateway':'🌐','ECG':'❤️','Thermostat':'🌡️','OxygenSensor':'🫧','Bed':'🛏️','BP':'💊','default':'📡'};
 
 let donutChart = null, barChart = null;
@@ -293,7 +280,6 @@ function buildGrid(){
 }
 
 function updateGrid(rows){
-  // Reset active devices
   DEVICES.forEach((_,i)=>{
     const c=document.getElementById(`dev-${i}`);
     const s=document.getElementById(`devSt-${i}`);
@@ -301,14 +287,14 @@ function updateGrid(rows){
     s.className='dev-status s-safe';
     s.textContent='SAFE';
   });
-  // Find worst severity per active device slot
   const worst = {};
   rows.forEach((r)=>{
-    const devIdx = r.pred !== 0 ? 0 : 1; // threats → device 0, benign → device 1
-    if(r.pred !== 0){
+    const isThreat = r.severity !== 'SAFE';
+    const devIdx = isThreat ? 0 : 1;
+    if(isThreat){
       const cur = worst[devIdx];
       const sevOrder = {CRITICAL:3,HIGH:2,MEDIUM:1,SAFE:0};
-      if(!cur || sevOrder[r.severity] > sevOrder[cur.severity]) worst[devIdx]=r;
+      if(!cur || (sevOrder[r.severity] || 0) > (sevOrder[cur.severity] || 0)) worst[devIdx]=r;
     }
   });
   Object.entries(worst).forEach(([idx,r])=>{
@@ -318,7 +304,7 @@ function updateGrid(rows){
     if(sev==='CRITICAL'){c.className='device-card critical';s.className='dev-status s-critical';}
     else if(sev==='HIGH'){c.className='device-card threat';s.className='dev-status s-threat';}
     else{c.className='device-card medium';s.className='dev-status s-medium';}
-    s.textContent=r.pred_name.split('/')[0].substring(0,12);
+    s.textContent=r.pred_name.substring(0,12);
   });
 }
 
@@ -326,14 +312,14 @@ function initCharts(){
   const dCtx = document.getElementById('donutChart').getContext('2d');
   donutChart = new Chart(dCtx,{
     type:'doughnut',
-    data:{labels:CLASS_NAMES,datasets:[{data:new Array(9).fill(0),backgroundColor:CLASS_COLORS,borderColor:'rgba(15,23,42,0.8)',borderWidth:2}]},
+    data:{labels:['Benign','Attack'],datasets:[{data:[0,0],backgroundColor:PALETTE,borderColor:'rgba(15,23,42,0.8)',borderWidth:2}]},
     options:{responsive:true,plugins:{legend:{labels:{color:'#94a3b8',font:{size:11}}}}}
   });
 
   const bCtx = document.getElementById('barChart').getContext('2d');
   barChart = new Chart(bCtx,{
     type:'bar',
-    data:{labels:CLASS_NAMES.map(n=>n.split('/')[0]),datasets:[{label:'Accuracy %',data:new Array(9).fill(0),backgroundColor:CLASS_COLORS,borderRadius:4}]},
+    data:{labels:['Benign','Attack'],datasets:[{label:'Accuracy %',data:[0,0],backgroundColor:PALETTE,borderRadius:4}]},
     options:{
       responsive:true,
       scales:{
@@ -346,17 +332,40 @@ function initCharts(){
 }
 
 function updateCharts(data){
-  const distData = CLASS_NAMES.map(n => data.class_dist[n] || 0);
-  donutChart.data.datasets[0].data = distData;
+  const classLabels = Object.keys(data.class_dist);
+  const distValues = Object.values(data.class_dist);
+  const bgColors = classLabels.map((l, i) => {
+    if(l.toLowerCase().includes('benign') || l.toLowerCase().includes('normal')) return '#22c55e';
+    return PALETTE[(i + 1) % PALETTE.length];
+  });
+
+  donutChart.data.labels = classLabels;
+  donutChart.data.datasets[0].data = distValues;
+  donutChart.data.datasets[0].backgroundColor = bgColors;
   donutChart.update();
 
-  const accData = CLASS_NAMES.map(n => data.per_class_acc[n] || 0);
-  barChart.data.datasets[0].data = accData;
+  const accLabels = Object.keys(data.per_class_acc);
+  const accValues = Object.values(data.per_class_acc);
+  const accColors = accLabels.map((l, i) => {
+    if(l.toLowerCase().includes('benign') || l.toLowerCase().includes('normal')) return '#22c55e';
+    return PALETTE[(i + 1) % PALETTE.length];
+  });
+
+  barChart.data.labels = accLabels;
+  barChart.data.datasets[0].data = accValues;
+  barChart.data.datasets[0].backgroundColor = accColors;
   barChart.update();
 }
 
 let currentRows = [];
-let currentModelKey = 'knn';
+let currentModelKey = '';
+
+function getBadgeClass(severity){
+  if(severity === 'SAFE') return 'b-safe';
+  if(severity === 'CRITICAL') return 'b-crit';
+  if(severity === 'HIGH') return 'b-high';
+  return 'b-med';
+}
 
 function updateTable(rows){
   currentRows = rows;
@@ -366,37 +375,40 @@ function updateTable(rows){
     <tr class="clickable-row" onclick="loadShap(${i})" id="trow-${i}">
       <td style="color:#475569">${i+1}</td>
       <td style="font-size:.8rem">${r.device}</td>
-      <td><span class="badge b${r.pred}">${r.pred_name}</span></td>
-      <td><span class="badge b${r.actual}">${r.actual_name}</span></td>
+      <td><span class="badge ${getBadgeClass(r.severity)}">${r.pred_name}</span></td>
+      <td><span class="badge ${r.actual_name.toLowerCase().includes('benign')?'b-safe':'b-high'}">${r.actual_name}</span></td>
       <td style="color:${r.conf>90?'#22c55e':r.conf>70?'#f59e0b':'#ef4444'};font-weight:bold">${r.conf}%</td>
-      <td><span class="badge ${r.severity==='SAFE'?'b0':r.severity==='CRITICAL'?'b5':r.severity==='HIGH'?'b1':'b4'}">${r.severity}</span></td>
+      <td><span class="badge ${getBadgeClass(r.severity)}">${r.severity}</span></td>
       <td class="${r.correct?'tick':'cross'}">${r.correct?'✓':'✗'}</td>
     </tr>`).join('');
 }
 
-const CLASS_COLORS_MAP = {
-  'Benign':'#22c55e','Botnet/Bashlite':'#ef4444','Backdoor/HttpBackdoor':'#f97316',
-  'Backdoor/Generic':'#fb923c','Backdoor/TheTick':'#fbbf24','Ransomware-PoC':'#dc2626',
-  'Coinminer/XMRig':'#a855f7','Rootkit/Beurk':'#6366f1','Rootkit/Bdvl':'#8b5cf6'
-};
-
+// Detailed explanations for Reconnaissance and Intrusion attack classes
 const THREAT_EXPLAIN = {
-  0: 'Normal host behaviour — syscall patterns and I/O rates are within expected baseline ranges for a benign IoMT device.',
-  1: 'High outbound write activity and abnormal network syscalls indicate Bashlite botnet behaviour — device is likely sending DDoS traffic.',
-  2: 'Elevated HTTP-related syscalls and unusual process spawning patterns match HttpBackdoor signatures — remote access channel suspected.',
-  3: 'Generic backdoor syscall fingerprint detected — elevated privilege checks (geteuid32, getegid32) with covert process activity.',
-  4: 'TheTick backdoor detected — persistent daemon behaviour with anomalous statfs64 and madvise syscall frequency.',
-  5: 'Ransomware-PoC activity — high write_merge and iowrite rates indicate bulk file encryption in progress. Immediate isolation required.',
-  6: 'XMRig coinminer detected — sustained CPU-bound syscall pattern with high memory access rates consistent with cryptomining.',
-  7: 'Beurk rootkit detected — syscall hooking signatures present; kernel-level concealment behaviour identified.',
-  8: 'Bdvl rootkit detected — deep kernel manipulation patterns detected via abnormal low-level syscall sequences.',
+  'Benign': 'Normal IoMT network flow — packet rates, connection states, payload byte sizes, and inter-arrival times are well within typical baseline medical telemetry thresholds.',
+  'HostDiscovery': 'Systematic network probing (e.g., ARP sweeps, ICMP ping sweeps) scanning the subnet to locate active connected medical devices and gateways.',
+  'Host Discovery': 'Systematic network probing (e.g., ARP sweeps, ICMP ping sweeps) scanning the subnet to locate active connected medical devices and gateways.',
+  'Host_Discovery': 'Systematic network probing (e.g., ARP sweeps, ICMP ping sweeps) scanning the subnet to locate active connected medical devices and gateways.',
+  'PortScan': 'Rapid scanning probes across multiple transport-layer ports attempting to identify open services and listening ports on the IoMT target.',
+  'Port Scan': 'Rapid scanning probes across multiple transport-layer ports attempting to identify open services and listening ports on the IoMT target.',
+  'Port_Scan': 'Rapid scanning probes across multiple transport-layer ports attempting to identify open services and listening ports on the IoMT target.',
+  'OSScan': 'Operating system fingerprinting queries analyzing TCP/IP stack implementation quirks and flags to identify underlying device OS and firmware.',
+  'OS Scan': 'Operating system fingerprinting queries analyzing TCP/IP stack implementation quirks and flags to identify underlying device OS and firmware.',
+  'OS_Scan': 'Operating system fingerprinting queries analyzing TCP/IP stack implementation quirks and flags to identify underlying device OS and firmware.',
+  'VulnScan': 'Targeted exploit inspection and signature testing searching for known CVEs, unpatched service flaws, or insecure medical protocols.',
+  'Vulnerability Scan': 'Targeted exploit inspection and signature testing searching for known CVEs, unpatched service flaws, or insecure medical protocols.',
+  'Vulnerability_Scan': 'Targeted exploit inspection and signature testing searching for known CVEs, unpatched service flaws, or insecure medical protocols.',
+  'BruteForce': 'High-frequency credential guessing attempts targeting IoMT authentication interfaces (SSH, Telnet, HTTP/Web UI) using wordlists to gain unauthorized access.',
+  'Dictionary Brute Force': 'High-frequency credential guessing attempts targeting IoMT authentication interfaces (SSH, Telnet, HTTP/Web UI) using wordlists to gain unauthorized access.',
+  'Dictionary_Brute_Force': 'High-frequency credential guessing attempts targeting IoMT authentication interfaces (SSH, Telnet, HTTP/Web UI) using wordlists to gain unauthorized access.',
+  'Brute Force': 'High-frequency credential guessing attempts targeting IoMT authentication interfaces (SSH, Telnet, HTTP/Web UI) using wordlists to gain unauthorized access.',
+  'Brute_Force': 'High-frequency credential guessing attempts targeting IoMT authentication interfaces (SSH, Telnet, HTTP/Web UI) using wordlists to gain unauthorized access.'
 };
 
 async function loadShap(rowIdx){
   const row = currentRows[rowIdx];
   if(!row) return;
 
-  // Highlight selected row
   document.querySelectorAll('.selected-row').forEach(r=>r.classList.remove('selected-row'));
   const tr = document.getElementById(`trow-${rowIdx}`);
   if(tr) tr.classList.add('selected-row');
@@ -428,16 +440,27 @@ async function loadShap(rowIdx){
       return;
     }
 
-    const col = CLASS_COLORS_MAP[d.pred_name] || '#60a5fa';
+    const isBenign = d.pred_name.toLowerCase().includes('benign') || d.pred_name.toLowerCase().includes('normal');
+    const col = isBenign ? '#22c55e' : (row.severity==='CRITICAL' ? '#dc2626' : (row.severity==='HIGH' ? '#ef4444' : '#f59e0b'));
+
     document.getElementById('deepPredBadge').textContent = d.pred_name;
     document.getElementById('deepPredBadge').style.cssText = `background:${col}22;color:${col};border:1px solid ${col};padding:6px 16px;border-radius:20px;font-weight:bold`;
     document.getElementById('deepDevice').textContent = row.device;
     document.getElementById('deepConf').textContent = d.confidence+'%';
     document.getElementById('deepModel').textContent = d.model;
     document.getElementById('deepClassName').textContent = d.pred_name;
-    document.getElementById('deepExplain').textContent = THREAT_EXPLAIN[d.pred_class] || '';
 
-    // Max abs shap for scaling
+    let explanation = THREAT_EXPLAIN[d.pred_name];
+    if(!explanation){
+      for(const [k,v] of Object.entries(THREAT_EXPLAIN)){
+        if(d.pred_name.toLowerCase().includes(k.toLowerCase())){
+          explanation = v;
+          break;
+        }
+      }
+    }
+    document.getElementById('deepExplain').textContent = explanation || 'Network traffic patterns, packet flags, probe frequencies, and payload features deviate from baseline profile, triggering reconnaissance/intrusion classification.';
+
     const maxAbs = Math.max(...d.features.map(f=>Math.abs(f.shap)), 0.001);
 
     const bars = d.features.map(f=>{
@@ -478,18 +501,48 @@ async function checkStatus(){
       dot.style.background='#22c55e';
       txt.textContent='System Ready';
     } else {
-      document.getElementById('sData').innerHTML='<span class="fail">✗ Not found</span>';
+      document.getElementById('sData').innerHTML='<span class="fail">✗ data/ files missing</span>';
       dot.style.background='#ef4444';
       txt.textContent='Data Missing';
     }
 
-    const map={knn:'sKnn',rf:'sRf',xgb:'sXgb',lgbm:'sLgbm',et:'sEt'};
-    for(const[k,id] of Object.entries(map)){
-      const el=document.getElementById(id);
-      if(el) el.innerHTML = d.models_available[k]
-        ? '<span class="ok">✓ Ready</span>'
-        : '<span class="warn">⚠ Not found</span>';
+    // Dynamic dropdown update with auto-discovered .pkl models
+    const sel = document.getElementById('modelSel');
+    const curVal = sel.value;
+    const runBtn = document.getElementById('runBtn');
+
+    if (d.models && d.models.length > 0) {
+      sel.innerHTML = d.models.map(m => `
+        <option value="${m.key}">${m.display_name}</option>
+      `).join('');
+      if (curVal && d.models.some(m => m.key === curVal)) {
+        sel.value = curVal;
+      }
+      currentModelKey = sel.value;
+      runBtn.disabled = false;
+    } else {
+      sel.innerHTML = '<option value="" disabled selected>⚠️ No .pkl models found in models/ folder</option>';
+      runBtn.disabled = true;
     }
+
+    // Dynamic system status list for models
+    const statusList = document.getElementById('modelStatusList');
+    if (d.models && d.models.length > 0) {
+      statusList.innerHTML = d.models.map(m => `
+        <div class="status-row">
+          <span title="${m.path}">${m.filename}</span>
+          <span class="ok">✓ Ready</span>
+        </div>
+      `).join('');
+    } else {
+      statusList.innerHTML = `
+        <div class="status-row">
+          <span>Models (.pkl)</span>
+          <span class="warn">⚠ None in models/</span>
+        </div>
+      `;
+    }
+
   }catch(e){
     document.getElementById('statusText').textContent='Backend Offline';
     document.getElementById('statusDot').style.background='#ef4444';
@@ -503,14 +556,18 @@ async function runDetection(){
   const model = document.getElementById('modelSel').value;
   const samples = document.getElementById('sampleSel').value;
 
+  if(!model){
+    alert('Please select a valid model from the dropdown.');
+    return;
+  }
+
   btn.disabled=true;
   btn.classList.add('running');
   btn.textContent='⏳ Running...';
   bar.style.display='block';
 
-  // Animate progress
   let pct=0;
-  const interval = setInterval(()=>{pct=Math.min(pct+2,90);fill.style.width=pct+'%';},80);
+  const interval = setInterval(()=>{pct=Math.min(pct+3,90);fill.style.width=pct+'%';},80);
 
   try{
     const r = await fetch('/api/run',{
@@ -525,7 +582,6 @@ async function runDetection(){
 
     if(d.error){alert('Error: '+d.error);return;}
 
-    // Stats
     document.getElementById('statAcc').textContent = d.accuracy+'%';
     document.getElementById('statF1').textContent = d.macro_f1;
     document.getElementById('statBen').textContent = d.benign;
@@ -555,7 +611,7 @@ async function runDetection(){
 buildGrid();
 initCharts();
 checkStatus();
-setInterval(checkStatus, 30000);
+setInterval(checkStatus, 15000);
 </script>
 </body>
 </html>
