@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IoMT Defender — Volumetric & Flood Attack Detection</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a0e1a 0%, #1a1f36 50%, #0f172a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden
+    }
+
+    .cyber-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: linear-gradient(rgba(59, 130, 246, 0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.07) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      animation: gridMove 25s linear infinite
+    }
+
+    @keyframes gridMove {
+      0% {
+        transform: translate(0, 0)
+      }
+
+      100% {
+        transform: translate(50px, 50px)
+      }
+    }
+
+    .header {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid #3b82f6;
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3)
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #60a5fa;
+      text-shadow: 0 0 10px rgba(96, 165, 250, 0.5)
+    }
+
+    .shield {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(45deg, #3b82f6, #60a5fa);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      animation: pulse 2s infinite
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.05)
+      }
+    }
+
+    .sys-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid #22c55e;
+      border-radius: 20px;
+      font-size: 0.85rem
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: blink 2s infinite
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding: 1.5rem 2rem;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 20px;
+      border: 1px solid #334155
+    }
+
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #60a5fa, #3b82f6, #1d4ed8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .5rem
+    }
+
+    .hero p {
+      color: #94a3b8;
+      font-size: 1rem
+    }
+
+    .panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 1.5rem;
+      backdrop-filter: blur(10px);
+      transition: all .3s
+    }
+
+    .card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15)
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #60a5fa
+    }
+
+    .form-row {
+      margin-bottom: 1rem
+    }
+
+    label {
+      display: block;
+      margin-bottom: .4rem;
+      color: #cbd5e1;
+      font-size: .9rem;
+      font-weight: 500
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(51, 65, 85, 0.5);
+      border: 1px solid #475569;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: .95rem;
+      transition: border-color .3s
+    }
+
+    select:focus,
+    input:focus {
+      outline: none;
+      border-color: #3b82f6
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all .3s;
+      margin-top: .5rem
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4)
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none
+    }
+
+    .btn.running {
+      background: linear-gradient(135deg, #f59e0b, #d97706)
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .5rem 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: .9rem
+    }
+
+    .status-row:last-child {
+      border-bottom: none
+    }
+
+    .ok {
+      color: #22c55e
+    }
+
+    .warn {
+      color: #f59e0b
+    }
+
+    .fail {
+      color: #ef4444
+    }
+
+    .wait {
+      color: #6b7280
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.2rem;
+      margin-bottom: 2rem
+    }
+
+    .stat {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all .3s
+    }
+
+    .stat:hover {
+      transform: translateY(-2px)
+    }
+
+    .stat-val {
+      font-size: 2.2rem;
+      font-weight: bold;
+      margin-bottom: .3rem
+    }
+
+    .stat-lbl {
+      color: #94a3b8;
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .acc {
+      color: #22c55e;
+      border-color: #22c55e
+    }
+
+    .f1c {
+      color: #3b82f6;
+      border-color: #3b82f6
+    }
+
+    .ben {
+      color: #22c55e
+    }
+
+    .thr {
+      color: #ef4444;
+      border-color: #ef4444
+    }
+
+    /* Device grid */
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #60a5fa;
+      margin-bottom: 1.2rem
+    }
+
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem
+    }
+
+    .device-card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: all .4s;
+      cursor: default
+    }
+
+    .device-card.safe {
+      border-color: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.2)
+    }
+
+    .device-card.threat {
+      border-color: #ef4444;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+      animation: threatPulse 2s infinite
+    }
+
+    .device-card.medium {
+      border-color: #f59e0b;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.2)
+    }
+
+    .device-card.critical {
+      border-color: #dc2626;
+      box-shadow: 0 0 16px rgba(220, 38, 38, 0.35);
+      animation: threatPulse 1s infinite
+    }
+
+    @keyframes threatPulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .7
+      }
+    }
+
+    .dev-icon {
+      font-size: 2rem;
+      margin-bottom: .5rem
+    }
+
+    .dev-name {
+      font-size: .75rem;
+      color: #94a3b8;
+      margin-bottom: .4rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .dev-status {
+      font-size: .7rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 10px;
+      display: inline-block
+    }
+
+    .dev-status.s-safe {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e
+    }
+
+    .dev-status.s-threat {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444
+    }
+
+    .dev-status.s-medium {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b
+    }
+
+    .dev-status.s-critical {
+      background: rgba(220, 38, 38, 0.2);
+      color: #dc2626
+    }
+
+    .dev-status.s-idle {
+      background: rgba(107, 114, 128, 0.2);
+      color: #6b7280
+    }
+
+    /* Charts */
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem
+    }
+
+    /* Table */
+    .tbl-wrap {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b
+    }
+
+    th {
+      background: rgba(51, 65, 85, 0.5);
+      color: #60a5fa;
+      font-weight: 600;
+      font-size: .8rem;
+      text-transform: uppercase;
+      letter-spacing: .3px
+    }
+
+    tr:hover {
+      background: rgba(59, 130, 246, 0.07)
+    }
+
+    .badge {
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: .75rem;
+      font-weight: bold
+    }
+
+    .b-safe {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3)
+    }
+
+    .b-high {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3)
+    }
+
+    .b-med {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.3)
+    }
+
+    .b-crit {
+      background: rgba(220, 38, 38, 0.2);
+      color: #dc2626;
+      border: 1px solid rgba(220, 38, 38, 0.4)
+    }
+
+    .tick {
+      color: #22c55e
+    }
+
+    .cross {
+      color: #ef4444
+    }
+
+    .prog-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(51, 65, 85, .5);
+      border-radius: 2px;
+      margin-top: 10px;
+      display: none
+    }
+
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      width: 0%;
+      border-radius: 2px;
+      transition: width .3s
+    }
+
+    /* SHAP bars */
+    .shap-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: .6rem;
+      font-size: .82rem
+    }
+
+    .shap-fname {
+      width: 160px;
+      flex-shrink: 0;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right
+    }
+
+    .shap-track {
+      flex: 1;
+      height: 22px;
+      background: rgba(51, 65, 85, .4);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .shap-fill-pos {
+      height: 100%;
+      background: linear-gradient(90deg, #16a34a, #22c55e);
+      border-radius: 4px;
+      transition: width .5s ease
+    }
+
+    .shap-fill-neg {
+      height: 100%;
+      background: linear-gradient(90deg, #dc2626, #ef4444);
+      border-radius: 4px;
+      float: right;
+      transition: width .5s ease
+    }
+
+    .shap-val {
+      width: 60px;
+      flex-shrink: 0;
+      font-size: .78rem;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums
+    }
+
+    .shap-fval {
+      width: 55px;
+      flex-shrink: 0;
+      color: #64748b;
+      font-size: .75rem;
+      font-variant-numeric: tabular-nums
+    }
+
+    tr.clickable-row {
+      cursor: pointer
+    }
+
+    tr.clickable-row:hover td {
+      background: rgba(96, 165, 250, 0.1) !important
+    }
+
+    tr.selected-row td {
+      background: rgba(96, 165, 250, 0.15) !important;
+      border-left: 3px solid #3b82f6
+    }
+
+    @media(max-width:900px) {
+
+      .panel,
+      .charts,
+      .stats {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media(max-width:600px) {
+
+      .panel,
+      .charts,
+      .stats {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="cyber-grid"></div>
+
+  <header class="header">
+    <nav class="nav">
+      <div class="logo">
+        <div class="shield">🛡️</div>
+        <span>IoMT Defender</span>
+      </div>
+      <div class="sys-status">
+        <div class="dot" id="statusDot"></div>
+        <span id="statusText">Initializing...</span>
+      </div>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>IoMT Volumetric & Flood Attack Detection</h1>
+      <p>J26_CS_307 Nirshan G.D.P</p>
+    </section>
+
+    <section class="panel">
+      <div class="card">
+        <div class="card-title">🔬 Detection Control</div>
+        <div class="form-row">
+          <label>ML Model <span style="font-size:.75rem;color:#94a3b8;font-weight:normal;">(Auto-detected from models/
+              folder)</span></label>
+          <select id="modelSel">
+            <option value="" disabled selected>⏳ Scanning models/ folder...</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Test Samples to Analyse</label>
+          <select id="sampleSel">
+            <option value="200">200 Samples</option>
+            <option value="450" selected>450 Samples</option>
+            <option value="900">900 Samples</option>
+            <option value="1800">1800 Samples</option>
+            <option value="2500">2500 Samples</option>
+            <option value="4000">4000 Samples</option>
+            <option value="7500">7500 Samples</option>
+            <option value="10000">10000 Samples</option>
+          </select>
+        </div>
+        <button class="btn" id="runBtn" onclick="runDetection()">▶ Run Detection</button>
+        <div class="prog-bar" id="progBar">
+          <div class="prog-fill" id="progFill"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚙️ System Status</div>
+        <div class="status-row"><span>Test Dataset</span><span id="sData" class="wait">⏳ Checking...</span></div>
+        <div id="modelStatusList">
+          <div class="status-row"><span>Models (.pkl)</span><span class="wait">⏳ Scanning...</span></div>
+        </div>
+        <div class="status-row"><span>Last Run</span><span id="sLast" style="color:#94a3b8">—</span></div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats">
+      <div class="stat acc">
+        <div class="stat-val" id="statAcc">—</div>
+        <div class="stat-lbl">Model Accuracy</div>
+      </div>
+      <div class="stat f1c">
+        <div class="stat-val" id="statF1">—</div>
+        <div class="stat-lbl">Macro F1 Score</div>
+      </div>
+      <div class="stat ben">
+        <div class="stat-val" id="statBen">—</div>
+        <div class="stat-lbl">Benign Detected</div>
+      </div>
+      <div class="stat thr">
+        <div class="stat-val" id="statThr">—</div>
+        <div class="stat-lbl">Threats Detected</div>
+      </div>
+    </section>
+
+    <!-- Device Grid -->
+    <section>
+      <div class="section-title">📡 IoMT Device Monitor</div>
+      <div class="device-grid" id="deviceGrid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="charts">
+      <div class="card">
+        <div class="card-title">🥧 Attack Class Distribution</div>
+        <canvas id="donutChart" height="260"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 Per-Class Detection Accuracy</div>
+        <canvas id="barChart" height="260"></canvas>
+      </div>
+    </section>
+
+    <!-- Deep Analysis -->
+    <section class="card" id="deepAnalysis" style="display:none;margin-bottom:2rem">
+      <div class="card-title">🧠 Deep Analysis — SHAP Explanation</div>
+      <div id="deepLoading" style="text-align:center;padding:2rem;color:#94a3b8;display:none">
+        <div style="font-size:2rem;margin-bottom:.5rem">⏳</div>
+        Computing SHAP values...
+      </div>
+      <div id="deepContent" style="display:none">
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center">
+          <div id="deepPredBadge" style="padding:6px 16px;border-radius:20px;font-weight:bold;font-size:.95rem"></div>
+          <div style="color:#94a3b8;font-size:.9rem">Device: <span id="deepDevice" style="color:#e2e8f0"></span></div>
+          <div style="color:#94a3b8;font-size:.9rem">Confidence: <span id="deepConf"
+              style="color:#22c55e;font-weight:bold"></span></div>
+          <div style="color:#94a3b8;font-size:.9rem">Model: <span id="deepModel" style="color:#60a5fa"></span></div>
+        </div>
+        <p style="color:#94a3b8;font-size:.85rem;margin-bottom:1.2rem">
+          Each bar shows how much a network traffic feature <span style="color:#22c55e">pushed the prediction
+            toward</span> or
+          <span style="color:#ef4444">pushed it away from</span> the detected volumetric attack class.
+          Longer bar = stronger influence.
+        </p>
+        <div id="shapBars"></div>
+        <div
+          style="margin-top:1.5rem;padding:1rem;background:rgba(59,130,246,0.08);border-radius:10px;border:1px solid #334155">
+          <div
+            style="font-size:.85rem;color:#94a3b8;margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px">
+            Why was this classified as <span id="deepClassName" style="color:#60a5fa"></span>?</div>
+          <div id="deepExplain" style="font-size:.9rem;color:#cbd5e1;line-height:1.7"></div>
+        </div>
+      </div>
+      <div id="deepError" style="display:none;color:#ef4444;padding:1rem"></div>
+    </section>
+
+    <!-- Table -->
+    <section class="card">
+      <div class="card-title">🔍 Detection Results <span
+          style="font-size:.75rem;color:#475569;font-weight:normal;margin-left:.5rem">Click any row for Deep
+          Analysis</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Device ID</th>
+              <th>Predicted Class</th>
+              <th>Actual Class</th>
+              <th>Confidence</th>
+              <th>Severity</th>
+              <th>Correct</th>
+            </tr>
+          </thead>
+          <tbody id="tblBody">
+            <tr>
+              <td colspan="7" style="text-align:center;color:#475569;padding:2rem">Run detection to see results.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const PALETTE = ['#22c55e', '#ef4444', '#f97316', '#fb923c', '#fbbf24', '#dc2626', '#a855f7', '#6366f1', '#8b5cf6', '#06b6d4'];
+    const DEVICE_ICONS = { 'RPi': '🖥️', 'Camera': '📷', 'SmartPump': '💉', 'Infusion': '🩺', 'VentMonitor': '🫁', 'Gateway': '🌐', 'ECG': '❤️', 'Thermostat': '🌡️', 'OxygenSensor': '🫧', 'Bed': '🛏️', 'BP': '💊', 'default': '📡' };
+
+    let donutChart = null, barChart = null;
+
+    function getIcon(name) {
+      for (const [k, v] of Object.entries(DEVICE_ICONS)) { if (name.includes(k)) return v; }
+      return DEVICE_ICONS.default;
+    }
+
+    // Build device grid
+    const DEVICES = [
+      'RPi-MedSensor-01', 'Gateway-Floor1'
+    ];
+    const FUTURE_SLOTS = 6;
+
+    function buildGrid() {
+      const g = document.getElementById('deviceGrid');
+      const active = DEVICES.map((d, i) => `
+    <div class="device-card" id="dev-${i}" title="${d}">
+      <div class="dev-icon">${getIcon(d)}</div>
+      <div class="dev-name">${d}</div>
+      <div class="dev-status s-idle" id="devSt-${i}">IDLE</div>
+    </div>`).join('');
+      const future = Array.from({ length: FUTURE_SLOTS }, (_, i) => `
+    <div class="device-card" style="border-style:dashed;opacity:.35;cursor:default">
+      <div class="dev-icon" style="font-size:1.4rem;color:#475569">＋</div>
+      <div class="dev-name" style="color:#475569">Future Device ${i + 1}</div>
+      <div class="dev-status s-idle" style="color:#475569">NOT ENROLLED</div>
+    </div>`).join('');
+      g.innerHTML = active + future;
+    }
+
+    function updateGrid(rows) {
+      DEVICES.forEach((_, i) => {
+        const c = document.getElementById(`dev-${i}`);
+        const s = document.getElementById(`devSt-${i}`);
+        c.className = 'device-card safe';
+        s.className = 'dev-status s-safe';
+        s.textContent = 'SAFE';
+      });
+      const worst = {};
+      rows.forEach((r) => {
+        const isThreat = r.severity !== 'SAFE';
+        const devIdx = isThreat ? 0 : 1;
+        if (isThreat) {
+          const cur = worst[devIdx];
+          const sevOrder = { CRITICAL: 3, HIGH: 2, MEDIUM: 1, SAFE: 0 };
+          if (!cur || (sevOrder[r.severity] || 0) > (sevOrder[cur.severity] || 0)) worst[devIdx] = r;
+        }
+      });
+      Object.entries(worst).forEach(([idx, r]) => {
+        const c = document.getElementById(`dev-${idx}`);
+        const s = document.getElementById(`devSt-${idx}`);
+        const sev = r.severity;
+        if (sev === 'CRITICAL') { c.className = 'device-card critical'; s.className = 'dev-status s-critical'; }
+        else if (sev === 'HIGH') { c.className = 'device-card threat'; s.className = 'dev-status s-threat'; }
+        else { c.className = 'device-card medium'; s.className = 'dev-status s-medium'; }
+        s.textContent = r.pred_name.substring(0, 12);
+      });
+    }
+
+    function initCharts() {
+      const dCtx = document.getElementById('donutChart').getContext('2d');
+      donutChart = new Chart(dCtx, {
+        type: 'doughnut',
+        data: { labels: ['Benign', 'Attack'], datasets: [{ data: [0, 0], backgroundColor: PALETTE, borderColor: 'rgba(15,23,42,0.8)', borderWidth: 2 }] },
+        options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } } }
+      });
+
+      const bCtx = document.getElementById('barChart').getContext('2d');
+      barChart = new Chart(bCtx, {
+        type: 'bar',
+        data: { labels: ['Benign', 'Attack'], datasets: [{ label: 'Accuracy %', data: [0, 0], backgroundColor: PALETTE, borderRadius: 4 }] },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, max: 100, ticks: { color: '#94a3b8', callback: v => v + '%' }, grid: { color: 'rgba(148,163,184,0.1)' } },
+            x: { ticks: { color: '#94a3b8', font: { size: 9 } }, grid: { color: 'rgba(148,163,184,0.1)' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function updateCharts(data) {
+      const classLabels = Object.keys(data.class_dist);
+      const distValues = Object.values(data.class_dist);
+      const bgColors = classLabels.map((l, i) => {
+        if (l.toLowerCase().includes('benign') || l.toLowerCase().includes('normal')) return '#22c55e';
+        return PALETTE[(i + 1) % PALETTE.length];
+      });
+
+      donutChart.data.labels = classLabels;
+      donutChart.data.datasets[0].data = distValues;
+      donutChart.data.datasets[0].backgroundColor = bgColors;
+      donutChart.update();
+
+      const accLabels = Object.keys(data.per_class_acc);
+      const accValues = Object.values(data.per_class_acc);
+      const accColors = accLabels.map((l, i) => {
+        if (l.toLowerCase().includes('benign') || l.toLowerCase().includes('normal')) return '#22c55e';
+        return PALETTE[(i + 1) % PALETTE.length];
+      });
+
+      barChart.data.labels = accLabels;
+      barChart.data.datasets[0].data = accValues;
+      barChart.data.datasets[0].backgroundColor = accColors;
+      barChart.update();
+    }
+
+    let currentRows = [];
+    let currentModelKey = '';
+
+    function getBadgeClass(severity) {
+      if (severity === 'SAFE') return 'b-safe';
+      if (severity === 'CRITICAL') return 'b-crit';
+      if (severity === 'HIGH') return 'b-high';
+      return 'b-med';
+    }
+
+    function updateTable(rows) {
+      currentRows = rows;
+      const b = document.getElementById('tblBody');
+      if (!rows || rows.length === 0) { b.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#475569;padding:2rem">No results.</td></tr>'; return; }
+      b.innerHTML = rows.slice(0, 200).map((r, i) => `
+    <tr class="clickable-row" onclick="loadShap(${i})" id="trow-${i}">
+      <td style="color:#475569">${i + 1}</td>
+      <td style="font-size:.8rem">${r.device}</td>
+      <td><span class="badge ${getBadgeClass(r.severity)}">${r.pred_name}</span></td>
+      <td><span class="badge ${r.actual_name.toLowerCase().includes('benign') ? 'b-safe' : 'b-high'}">${r.actual_name}</span></td>
+      <td style="color:${r.conf > 90 ? '#22c55e' : r.conf > 70 ? '#f59e0b' : '#ef4444'};font-weight:bold">${r.conf}%</td>
+      <td><span class="badge ${getBadgeClass(r.severity)}">${r.severity}</span></td>
+      <td class="${r.correct ? 'tick' : 'cross'}">${r.correct ? '✓' : '✗'}</td>
+    </tr>`).join('');
+    }
+
+    const THREAT_EXPLAIN = {
+      'Benign': 'Normal IoMT network flow — packet rates, payload byte sizes, flow durations, and inter-arrival times are well within typical baseline medical telemetry thresholds.',
+      'TCP_Flood': 'Sustained high-volume stream of raw TCP segment traffic saturating transmission queues and socket buffers on the target IoMT node.',
+      'UDP_Flood': 'Abnormally elevated UDP packet arrival rate and flow packet volume detected. High volume of stateless datagrams saturating receiver queue buffers.',
+      'SYN_Flood': 'Rapid sequence of incomplete TCP SYN handshakes detected with high flow SYN-ACK asymmetry, exhausting transmission control block (TCB) memory on the IoMT node.',
+      'HTTP_Flood': 'Volumetric HTTP GET/POST application request flood targeting device web servers or REST endpoints, resulting in thread starvation and denial of medical services.',
+      'ICMP_Flood': 'Overwhelming burst of ICMP echo request (ping) frames consuming device processing cycles and link transmission capacity.',
+      'UDP Flood': 'Abnormally elevated UDP packet arrival rate and flow packet volume detected. High volume of stateless datagrams saturating receiver queue buffers.',
+      'TCP-SYN Flood': 'Rapid sequence of incomplete TCP SYN handshakes detected with high flow SYN-ACK asymmetry, exhausting transmission control block (TCB) memory on the IoMT node.',
+      'HTTP Flood': 'Volumetric HTTP GET/POST application request flood targeting device web servers or REST endpoints, resulting in thread starvation and denial of medical services.',
+      'ICMP Flood': 'Overwhelming burst of ICMP echo request (ping) frames consuming device processing cycles and link transmission capacity.',
+      'Slowloris Flood': 'Multiple slow, partial HTTP connection headers maintained open concurrently, holding connection slots hostage and exhausting HTTP listener capacity.',
+      'DNS Amplification': 'Disproportionate inbound packet payload volume from external DNS resolvers, reflecting high-bandwidth responses into the IoMT device subnet.',
+      'ACK Flood': 'High-volume transmission of spoofed ACK packets without corresponding established session states, overloading interface state filtering engines.',
+      'Volumetric Flood': 'Massive aggregated byte throughput and packet-per-second spike exceeding normal interface line rate, causing link saturation and buffer drops.'
+    };
+
+    async function loadShap(rowIdx) {
+      const row = currentRows[rowIdx];
+      if (!row) return;
+
+      document.querySelectorAll('.selected-row').forEach(r => r.classList.remove('selected-row'));
+      const tr = document.getElementById(`trow-${rowIdx}`);
+      if (tr) tr.classList.add('selected-row');
+
+      const sec = document.getElementById('deepAnalysis');
+      const loading = document.getElementById('deepLoading');
+      const content = document.getElementById('deepContent');
+      const errEl = document.getElementById('deepError');
+
+      sec.style.display = 'block';
+      loading.style.display = 'block';
+      content.style.display = 'none';
+      errEl.style.display = 'none';
+      sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      try {
+        const res = await fetch('/api/shap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: currentModelKey, sample_idx: row.sample_idx })
+        });
+        const d = await res.json();
+
+        loading.style.display = 'none';
+
+        if (d.error) {
+          errEl.textContent = '⚠ SHAP error: ' + d.error;
+          errEl.style.display = 'block';
+          return;
+        }
+
+        const isBenign = d.pred_name.toLowerCase().includes('benign') || d.pred_name.toLowerCase().includes('normal');
+        const col = isBenign ? '#22c55e' : (row.severity === 'CRITICAL' ? '#dc2626' : '#ef4444');
+
+        document.getElementById('deepPredBadge').textContent = d.pred_name;
+        document.getElementById('deepPredBadge').style.cssText = `background:${col}22;color:${col};border:1px solid ${col};padding:6px 16px;border-radius:20px;font-weight:bold`;
+        document.getElementById('deepDevice').textContent = row.device;
+        document.getElementById('deepConf').textContent = d.confidence + '%';
+        document.getElementById('deepModel').textContent = d.model;
+        document.getElementById('deepClassName').textContent = d.pred_name;
+
+        let explanation = THREAT_EXPLAIN[d.pred_name];
+        if (!explanation) {
+          for (const [k, v] of Object.entries(THREAT_EXPLAIN)) {
+            if (d.pred_name.toLowerCase().includes(k.toLowerCase())) {
+              explanation = v;
+              break;
+            }
+          }
+        }
+        document.getElementById('deepExplain').textContent = explanation || 'Network traffic patterns, flow rates, and packet metrics deviate from baseline profile, triggering volumetric flood classification.';
+
+        const maxAbs = Math.max(...d.features.map(f => Math.abs(f.shap)), 0.001);
+
+        const bars = d.features.map(f => {
+          const pct = Math.round((Math.abs(f.shap) / maxAbs) * 100);
+          const valColor = f.shap > 0 ? '#22c55e' : '#ef4444';
+          const sign = f.shap > 0 ? '+' : '';
+          return `<div class="shap-row">
+        <div class="shap-fname" title="${f.feature}">${f.feature}</div>
+        <div class="shap-track">
+          ${f.shap >= 0
+              ? `<div class="shap-fill-pos" style="width:${pct}%"></div>`
+              : `<div class="shap-fill-neg" style="width:${pct}%"></div>`}
+        </div>
+        <div class="shap-val" style="color:${valColor}">${sign}${f.shap.toFixed(3)}</div>
+        <div class="shap-fval">val: ${f.value}</div>
+      </div>`;
+        }).join('');
+
+        document.getElementById('shapBars').innerHTML = bars;
+        content.style.display = 'block';
+
+      } catch (e) {
+        loading.style.display = 'none';
+        errEl.textContent = '⚠ Could not reach backend: ' + e.message;
+        errEl.style.display = 'block';
+      }
+    }
+
+    async function checkStatus() {
+      try {
+        const r = await fetch('/api/status');
+        const d = await r.json();
+        const dot = document.getElementById('statusDot');
+        const txt = document.getElementById('statusText');
+
+        if (d.data_loaded) {
+          document.getElementById('sData').innerHTML = `<span class="ok">✓ ${d.data_samples.toLocaleString()} samples</span>`;
+          dot.style.background = '#22c55e';
+          txt.textContent = 'System Ready';
+        } else {
+          document.getElementById('sData').innerHTML = '<span class="fail">✗ data/ files missing</span>';
+          dot.style.background = '#ef4444';
+          txt.textContent = 'Data Missing';
+        }
+
+        // Dynamic dropdown update with auto-discovered .pkl models
+        const sel = document.getElementById('modelSel');
+        const curVal = sel.value;
+        const runBtn = document.getElementById('runBtn');
+
+        if (d.models && d.models.length > 0) {
+          sel.innerHTML = d.models.map(m => `
+        <option value="${m.key}">${m.display_name}</option>
+      `).join('');
+          if (curVal && d.models.some(m => m.key === curVal)) {
+            sel.value = curVal;
+          }
+          currentModelKey = sel.value;
+          runBtn.disabled = false;
+        } else {
+          sel.innerHTML = '<option value="" disabled selected>⚠️ No .pkl models found in models/ folder</option>';
+          runBtn.disabled = true;
+        }
+
+        // Dynamic system status list for models
+        const statusList = document.getElementById('modelStatusList');
+        if (d.models && d.models.length > 0) {
+          statusList.innerHTML = d.models.map(m => `
+        <div class="status-row">
+          <span title="${m.path}">${m.filename}</span>
+          <span class="ok">✓ Ready</span>
+        </div>
+      `).join('');
+        } else {
+          statusList.innerHTML = `
+        <div class="status-row">
+          <span>Models (.pkl)</span>
+          <span class="warn">⚠ None in models/</span>
+        </div>
+      `;
+        }
+
+      } catch (e) {
+        document.getElementById('statusText').textContent = 'Backend Offline';
+        document.getElementById('statusDot').style.background = '#ef4444';
+      }
+    }
+
+    async function runDetection() {
+      const btn = document.getElementById('runBtn');
+      const bar = document.getElementById('progBar');
+      const fill = document.getElementById('progFill');
+      const model = document.getElementById('modelSel').value;
+      const samples = document.getElementById('sampleSel').value;
+
+      if (!model) {
+        alert('Please select a valid model from the dropdown.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('running');
+      btn.textContent = '⏳ Running...';
+      bar.style.display = 'block';
+
+      let pct = 0;
+      const interval = setInterval(() => { pct = Math.min(pct + 3, 90); fill.style.width = pct + '%'; }, 80);
+
+      try {
+        const r = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, samples: parseInt(samples) })
+        });
+        const d = await r.json();
+
+        clearInterval(interval);
+        fill.style.width = '100%';
+
+        if (d.error) { alert('Error: ' + d.error); return; }
+
+        document.getElementById('statAcc').textContent = d.accuracy + '%';
+        document.getElementById('statF1').textContent = d.macro_f1;
+        document.getElementById('statBen').textContent = d.benign;
+        document.getElementById('statThr').textContent = d.threats;
+        document.getElementById('sLast').textContent = new Date().toLocaleTimeString() + ' (' + d.model + ')';
+
+        currentModelKey = d.model_key || model;
+        updateGrid(d.rows);
+        updateCharts(d);
+        updateTable(d.rows);
+
+      } catch (e) {
+        clearInterval(interval);
+        alert('Failed to connect to backend. Make sure app.py is running.');
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.classList.remove('running');
+          btn.textContent = '▶ Run Detection';
+          bar.style.display = 'none';
+          fill.style.width = '0%';
+        }, 800);
+      }
+    }
+
+    // Init
+    buildGrid();
+    initCharts();
+    checkStatus();
+    setInterval(checkStatus, 15000);
+  </script>
+</body>
+
+</html>
