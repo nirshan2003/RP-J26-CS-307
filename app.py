@@ -2,6 +2,31 @@ from flask import Flask, jsonify, render_template, request
 import joblib, pandas as pd, numpy as np, os, re
 from datetime import datetime
 from sklearn.metrics import accuracy_score, f1_score
+<<<<<<< HEAD
+from sklearn.preprocessing import StandardScaler
+
+app = Flask(__name__)
+
+# Exact 6 classes mapped from your IoMT dataset (LabelEncoder order)
+CLASS_NAMES = {
+    0: 'Browser_Hijacking',
+    1: 'Command_Injection',
+    2: 'Normal',
+    3: 'SQL_Injection',
+    4: 'Uploading_Attack',
+    5: 'XSS'
+}
+
+SEVERITY = {
+    0: 'HIGH',
+    1: 'HIGH',
+    2: 'SAFE',
+    3: 'CRITICAL',
+    4: 'HIGH',
+    5: 'HIGH'
+}
+
+=======
 
 app = Flask(__name__)
 
@@ -14,6 +39,7 @@ SEVERITY = {
     0: 'SAFE', 1: 'HIGH', 2: 'HIGH', 3: 'HIGH', 4: 'HIGH',
     5: 'CRITICAL', 6: 'MEDIUM', 7: 'CRITICAL', 8: 'CRITICAL'
 }
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
 DEVICE_POOL = [
     'RPi-MedSensor-01', 'RPi-HeartRate-02', 'RPi-BloodPressure-03',
     'RPi-Glucose-04', 'IP-Camera-ICU-01', 'IP-Camera-Ward-02',
@@ -23,6 +49,20 @@ DEVICE_POOL = [
     'Thermostat-A1', 'OxygenSensor-01', 'BP-Cuff-Smart-01', 'Bed-Sensor-03'
 ]
 
+<<<<<<< HEAD
+TREE_MODELS = {'rf', 'xgb', 'lgbm', 'dt', 'et'}
+SCALE_MODELS = {'mlp', 'knn', 'lr'}
+
+MODELS_PATH = {
+    'et':   'models/ExtraTreesmodel.pkl',
+    'rf':   'models/RandomForest_model.pkl',
+    'xgb':  'models/XGBoost_model.pkl',
+    'lgbm': 'models/LightGBM_model.pkl',
+    'knn':  'models/KNN_model.pkl',
+    'dt':   'models/DecisionTree_model.pkl',
+    'mlp':  'models/MLP_model.pkl',
+    'lr':   'models/LogisticRegression_model.pkl',
+=======
 # Tree-based models support fast SHAP TreeExplainer
 TREE_MODELS = {'rf', 'xgb', 'lgbm', 'dt', 'et'}
 
@@ -35,6 +75,7 @@ MODELS_PATH = {
     'et':   'models/et_model.pkl',
     'mlp':  'models/mlp_model.pkl',
     'svm':  'models/svm_model.pkl',
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
 }
 
 loaded_models = {}
@@ -71,22 +112,41 @@ def api_status():
 def api_run():
     init_data()
     if X_test_data is None:
+<<<<<<< HEAD
+        return jsonify({'error': 'Test data not found in data/ folder.'}), 400
+
+    body = request.json or {}
+    model_key = body.get('model', 'et')
+    n_samples = min(int(body.get('samples', 300)), len(X_test_data))
+=======
         return jsonify({'error': 'Test data not found. Export X_test.csv and y_test.csv to the data/ folder.'}), 400
 
     body = request.json or {}
     model_key = body.get('model', 'knn')
     n_samples = min(int(body.get('samples', 500)), len(X_test_data))
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
 
     model = get_model(model_key)
     if model is None:
         return jsonify({'error': f'Model "{model_key}" not found in models/ folder.'}), 400
 
+<<<<<<< HEAD
+    # Fixed seed stratified sampling for stable, consistent accuracy across runs
+    np.random.seed(42)
+    per_class = max(1, n_samples // 6)
+    idx = []
+    for c in range(6):
+        ci = y_test_data[y_test_data == c].index.tolist()
+        if len(ci) > 0:
+            idx.extend(np.random.choice(ci, min(per_class, len(ci)), replace=False).tolist())
+=======
     # Stratified sample — equal from each class
     per_class = max(1, n_samples // 9)
     idx = []
     for c in range(9):
         ci = y_test_data[y_test_data == c].index.tolist()
         idx.extend(np.random.choice(ci, min(per_class, len(ci)), replace=False).tolist())
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
 
     X = X_test_data.loc[idx]
     y = y_test_data.loc[idx]
@@ -95,6 +155,14 @@ def api_run():
     if model_key == 'lgbm':
         Xi.columns = [re.sub(r'[^A-Za-z0-9_]', '_', c) for c in Xi.columns]
 
+<<<<<<< HEAD
+    # Apply StandardScaler for models requiring feature scaling
+    if model_key in SCALE_MODELS:
+        scaler = StandardScaler()
+        Xi = pd.DataFrame(scaler.fit_transform(Xi), columns=Xi.columns, index=Xi.index)
+
+=======
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
     preds = model.predict(Xi)
     probs = model.predict_proba(Xi)
     confs = probs.max(axis=1)
@@ -102,10 +170,17 @@ def api_run():
     acc = accuracy_score(y, preds)
     f1  = f1_score(y, preds, average='macro')
 
+<<<<<<< HEAD
+    class_dist = {CLASS_NAMES[i]: int((preds == i).sum()) for i in range(6)}
+
+    per_class_acc = {}
+    for i in range(6):
+=======
     class_dist = {CLASS_NAMES[i]: int((preds == i).sum()) for i in range(9)}
 
     per_class_acc = {}
     for i in range(9):
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
         mask = y.values == i
         if mask.sum() > 0:
             per_class_acc[CLASS_NAMES[i]] = round(float((preds[mask] == i).mean()) * 100, 1)
@@ -113,7 +188,11 @@ def api_run():
     rows = []
     for i, (sample_idx, p, c, a) in enumerate(zip(idx, preds, confs, y.values)):
         rows.append({
+<<<<<<< HEAD
+            'sample_idx':  int(sample_idx),
+=======
             'sample_idx':  int(sample_idx),   # real X_test row index for SHAP
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
             'device':      DEVICE_POOL[i % len(DEVICE_POOL)],
             'pred':        int(p),
             'pred_name':   CLASS_NAMES[int(p)],
@@ -124,14 +203,23 @@ def api_run():
             'severity':    SEVERITY[int(p)],
         })
 
+<<<<<<< HEAD
+    normal_idx = 2
+=======
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
     return jsonify({
         'accuracy':      round(acc * 100, 2),
         'macro_f1':      round(f1, 4),
         'model':         model_key.upper(),
         'model_key':     model_key,
         'total':         len(rows),
+<<<<<<< HEAD
+        'threats':       int((preds != normal_idx).sum()),
+        'benign':        int((preds == normal_idx).sum()),
+=======
         'threats':       int((preds != 0).sum()),
         'benign':        int((preds == 0).sum()),
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
         'class_dist':    class_dist,
         'per_class_acc': per_class_acc,
         'rows':          rows[:300],
@@ -152,7 +240,10 @@ def api_shap():
     if model is None:
         return jsonify({'error': f'Model "{model_key}" not found.'}), 400
 
+<<<<<<< HEAD
+=======
     # Get single sample
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
     sample = X_test_data.iloc[[sample_idx]].copy()
     feat_names = list(X_test_data.columns)
 
@@ -162,6 +253,16 @@ def api_shap():
     else:
         feat_names_clean = feat_names
 
+<<<<<<< HEAD
+    if model_key in SCALE_MODELS:
+        scaler = StandardScaler()
+        sample = pd.DataFrame(scaler.fit_transform(X_test_data), columns=X_test_data.columns).iloc[[sample_idx]]
+
+    try:
+        if model_key in TREE_MODELS:
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(sample)
+=======
     try:
         if model_key in TREE_MODELS:
             # Fast TreeExplainer
@@ -169,6 +270,7 @@ def api_shap():
             shap_values = explainer.shap_values(sample)
 
             # shap_values shape: (n_classes, n_samples, n_features) or (n_samples, n_features, n_classes)
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
             pred_class = int(model.predict(sample)[0])
 
             if isinstance(shap_values, list):
@@ -177,11 +279,21 @@ def api_shap():
             else:
                 sv = shap_values[0, :, pred_class]
                 base = float(explainer.expected_value[pred_class])
+<<<<<<< HEAD
+        else:
+            bg_idx = np.random.choice(len(X_test_data), min(50, len(X_test_data)), replace=False)
+            background = X_test_data.iloc[bg_idx]
+            if model_key in SCALE_MODELS:
+                scaler = StandardScaler()
+                background = pd.DataFrame(scaler.fit_transform(background), columns=background.columns)
+            
+=======
 
         else:
             # KernelExplainer for KNN/MLP/SVM — use small background
             bg_idx = np.random.choice(len(X_test_data), 50, replace=False)
             background = X_test_data.iloc[bg_idx]
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
             explainer = shap.KernelExplainer(model.predict_proba, background)
             shap_values = explainer.shap_values(sample, nsamples=100)
             pred_class = int(model.predict(sample)[0])
@@ -193,7 +305,10 @@ def api_shap():
                 sv = shap_values[0, :, pred_class]
                 base = float(explainer.expected_value[pred_class])
 
+<<<<<<< HEAD
+=======
         # Build top-12 features sorted by |SHAP value|
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
         feat_vals = sample.iloc[0].values
         pairs = list(zip(feat_names, feat_names_clean, sv, feat_vals))
         pairs.sort(key=lambda x: abs(x[2]), reverse=True)
@@ -222,5 +337,9 @@ def api_shap():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+<<<<<<< HEAD
+    app.run(debug=True, port=5000)
+=======
     init_data()
     app.run(debug=True, port=5000)
+>>>>>>> f377f9accf5ff89455bc1f68cae96561b11be34d
